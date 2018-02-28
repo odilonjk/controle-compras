@@ -11,5 +11,9 @@ Próximos passos:
 ## Configurações PostgreSQL
 
 Database: **controle_compras**
+
 User: **postgres**
+
 Pass: **postgres**
+
+Para criar a tabela e os tipos basta importar no banco o arquivo **create.sql**
