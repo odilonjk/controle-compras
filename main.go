@@ -2,10 +2,11 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"log"
 	"net/http"
+
 	"github.com/gorilla/mux"
-	"encoding/json"
 
 	_ "github.com/lib/pq"
 )
@@ -25,12 +26,58 @@ func initDB(dataSourceName string) {
 }
 
 func main() {
-	initDB("postgres://postgres:postgres@localhost/controle_compras")
+	initDB("postgres://postgres:postgres@localhost/purchase-control")
 
 	router := mux.NewRouter()
-	router.HandleFunc("/compra", addPurchase).Methods("POST")
-	router.HandleFunc("/compras", getPurchaseList).Methods("GET")
+	router.HandleFunc("/purchase", persistPurchase).Methods("POST")
+	router.HandleFunc("/purchase", getPurchaseList).Methods("GET")
+	router.HandleFunc("/purchase/{id}", getPurchase).Methods("GET")
+	router.HandleFunc("/purchase/{id}", removePurchase).Methods("DELETE")
+	router.HandleFunc("/purchase/{id}", updatePurchase).Methods("PUT")
 	log.Fatal(http.ListenAndServe(":3000", router))
+}
+
+func updatePurchase(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "PUT" {
+		http.Error(w, http.StatusText(405), 405)
+		return
+	}
+	params := mux.Vars(r)
+
+	var purchase Purchase
+	decoder := json.NewDecoder(r.Body)
+	decoder.Decode(&purchase)
+
+	sqlStatement := "update purchase set price = $1, name = $2 where id = $3"
+
+	_, err := db.Exec(sqlStatement, purchase.Price, purchase.Name, params["id"])
+
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func getPurchase(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, http.StatusText(405), 405)
+		return
+	}
+	var purchase Purchase
+
+	params := mux.Vars(r)
+
+	sqlStatement := "select id, price, name from purchase where id = $1;"
+
+	err := db.QueryRow(sqlStatement, params["id"]).Scan(&purchase.ID, &purchase.Price, &purchase.Name)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(purchase)
+
 }
 
 func getPurchaseList(w http.ResponseWriter, r *http.Request) {
@@ -39,32 +86,66 @@ func getPurchaseList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sqlStatement := `select id, observacao, valor from compras;`
+	sqlStatement := "select id, price, name from purchase;"
 
-	_, err := db.Exec(sqlStatement)
+	rows, err := db.Query(sqlStatement)
 
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	var purchases []Purchase
+
+	defer rows.Close()
+	for rows.Next() {
+		var purchase Purchase
+		err = rows.Scan(&purchase.ID, &purchase.Price, &purchase.Name)
+		if err != nil {
+			panic(err)
+		}
+		purchases = append(purchases, purchase)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(purchases)
 }
 
-func addPurchase(w http.ResponseWriter, r *http.Request) {
+func removePurchase(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "DELETE" {
+		http.Error(w, http.StatusText(405), 405)
+		return
+	}
+
+	params := mux.Vars(r)
+
+	sqlStatement := "delete from purchase where id = $1;"
+
+	_, err := db.Exec(sqlStatement, params["id"])
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+}
+
+func persistPurchase(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, http.StatusText(405), 405)
 		return
 	}
 
-	sqlStatement := `insert into compras (valor, data, observacao, recebido, forma_pagamento, satisfacao) 
-					 values($1, $2, $3, $4, $5, $6)`
+	var purchase Purchase
+	_ = json.NewDecoder(r.Body).Decode(&purchase)
 
-	purchaseList, err := db.Exec(sqlStatement, 15.00, "2018-02-28", "Almoço", 0, "cartao", "satisfeito")
+	sqlStatement := "insert into purchase (price, name) values($1, $2);"
+
+	_, err := db.Exec(sqlStatement, purchase.Price, purchase.Name)
 
 	if err != nil {
 		log.Fatal(err)
+		w.WriteHeader(http.StatusBadRequest)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	//	Precisa tratar a lista 'purchaseList' para retornar o json.
-
 }

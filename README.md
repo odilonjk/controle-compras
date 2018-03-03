@@ -1,19 +1,25 @@
 Exemplo de API rest utilizando Go.
-O serviço roda na porta 3000.
 
 * Go: **1.10**
 
-Próximos passos:
-* Adicionar router
-* Adicinar CRUD
-* Melhorar organização do código
+Instalar dependências:
+    go get github.com/gorilla/mux
+    go get github.com/lib/pq
+
+Executar API:
+    go run *.go
 
 ## Configurações PostgreSQL
 
-Database: **controle_compras**
+Database: **purchase-control**
 
 User: **postgres**
 
 Pass: **postgres**
 
-Para criar a tabela e os tipos basta importar no banco o arquivo **create.sql**
+Para criar a tabela basta importar no banco o arquivo **create.sql**
+
+## Próximos passos
+
+* Adicionar validações no CRUD e REST
+* Melhorar organização do código
