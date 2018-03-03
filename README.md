@@ -3,12 +3,15 @@ Exemplo de API rest utilizando Go.
 * Go: **1.10**
 
 Instalar dependências:
+
     ```
     go get github.com/gorilla/mux
+
     go get github.com/lib/pq
     ```
 
 Executar API:
+
     ```
     go run *.go
     ```
