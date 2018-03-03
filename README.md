@@ -4,17 +4,13 @@ Exemplo de API rest utilizando Go.
 
 Instalar dependências:
 
-    ```
     go get github.com/gorilla/mux
 
     go get github.com/lib/pq
-    ```
 
 Executar API:
 
-    ```
     go run *.go
-    ```
 
 ## Configurações PostgreSQL
 
